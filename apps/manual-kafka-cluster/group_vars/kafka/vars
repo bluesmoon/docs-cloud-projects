@@ -10,6 +10,7 @@ image: linode/ubuntu24.04
 group:
 linode_tags:
 firewall_label:
+vpc_label:
 
 # Optional settings for DNS
 domain_name:
