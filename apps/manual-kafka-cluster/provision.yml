@@ -87,6 +87,28 @@
     register: firewall_info
     when: firewall_label|d(False)
 
+
+  # Placement Group
+
+  - name: set hosts per placement group
+    set_fact:
+      max_hosts_per_pg: 4
+    when: not max_hosts_per_pg|d(False)
+
+  - name: create placement group for HA
+    # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/placement_group/
+    linode.cloud.placement_group:
+      label: '{{ instance_prefix }}-{{ item.0 }}-ha-{{ item.1 }}'
+      placement_group_policy: strict
+      placement_group_type: anti_affinity:local
+      region: '{{ item.0 }}'
+      state: present
+      api_token: '{{ api_token }}'
+    register: placement_group_info
+    with_nested:
+      - '{{ region }}'
+      - '{{ range(1, (cluster_size / max_hosts_per_pg) | round(0, "ceil") | int + 1 ) }}'
+
   - name: check if instances already created
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/instance_list/
     linode.cloud.instance_list:
@@ -117,11 +139,16 @@
           primary: true
           ipv4:
             nat_1_1: 'any'
+      placement_group:
+        compliant_only: true
+        id: '{{ (placement_group_info.results | selectattr("placement_group.region", "eq", region) | map(attribute="placement_group"))[(item|int-1) // max_hosts_per_pg].id }}'
       private_ip: false
       ua_prefix: 'docs-kafka-occ'
       tags: '{{ linode_tags }}'
       state: present
       firewall_id: '{{ (firewall_info.firewall|default({})).id|default(omit) }}'
+    vars:
+      placement_group: '{{ placement_group_info.results[(item|int-1) // max_hosts_per_pg].placement_group }}'
     with_sequence: count='{{ cluster_size }}'
     when: (instance_prefix + item) not in existing_instances
 
