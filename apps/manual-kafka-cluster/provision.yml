@@ -8,6 +8,15 @@
 
   tasks:
 
+  - name: check if region supports all necessary features
+    # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/region_info/
+    # https://techdocs.akamai.com/cloud-computing/docs/how-to-choose-a-data-center#product-availability
+    linode.cloud.region_info:
+      api_token: '{{ api_token }}'
+      id: '{{ item }}'
+    register: region_info
+    with_items: '{{ region }}'
+
   - name: assign vpc label
     when: not vpc_label|d(False)
     set_fact:
