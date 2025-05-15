@@ -8,6 +8,9 @@
 
   tasks:
 
+
+  # Environment
+
   - name: check if region supports all necessary features
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/region_info/
     # https://techdocs.akamai.com/cloud-computing/docs/how-to-choose-a-data-center#product-availability
@@ -16,6 +19,9 @@
       id: '{{ item }}'
     register: region_info
     with_items: '{{ region }}'
+
+
+  # VPC
 
   - name: assign vpc label
     when: not vpc_label|d(False)
@@ -79,6 +85,9 @@
       - item.vpc.id
     with_items: '{{ vpc_info.results }}'
 
+
+  # Firewall
+
   - name: get firewall info
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/firewall_info/
     linode.cloud.firewall_info:
@@ -108,6 +117,9 @@
     with_nested:
       - '{{ region }}'
       - '{{ range(1, (cluster_size / max_hosts_per_pg) | round(0, "ceil") | int + 1 ) }}'
+
+
+  # Instances
 
   - name: check if instances already created
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/instance_list/
@@ -159,6 +171,9 @@
     register: info
     with_sequence: count='{{ cluster_size }}'
 
+
+  # DNS
+
   - name: check if hosts are in DNS
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/domain_info/
     linode.cloud.domain_info:
@@ -198,6 +213,9 @@
       - domain_name|d(False)
       - domain_info|d(False)
 
+
+  # Update inventory
+
   - name: update group_vars
     blockinfile:
       path: ./group_vars/kafka/vars
@@ -224,6 +242,9 @@
         {%- for count in range(cluster_size) %}
         {{ info.results[count].networking.ipv4.public.0.rdns }} {% if count < controller_count %}role='controller and broker'{%else%}role='broker only'{%endif%}
         {%- endfor %}
+
+
+  # Wait
 
   - name: wait for port 22 to become open
     wait_for:
