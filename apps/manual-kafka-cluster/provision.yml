@@ -128,7 +128,7 @@
       api_token: '{{ api_token }}'
       filters:
         - name: label
-          values: "{{ [ instance_prefix ] | product(range(1, cluster_size+1)) | map('join') | list }}"
+          values: "{{ [ instance_prefix ] | product([region]|flatten, query('sequence', 'count={{cluster_size}} format=%03d')) | map('join', '-') | list }}"
       order_by: label
     register: existing_instances
 
@@ -139,38 +139,41 @@
   - name: creating kafka servers
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/instance/
     linode.cloud.instance:
-      label: '{{ instance_prefix }}{{ item }}'
+      label: '{{ item | join("-") }}'
       api_token: '{{ api_token }}'
       type: '{{ type }}'
-      region: '{{ region }}'
+      region: '{{ item.1 }}'
       image: '{{ image }}'
       root_pass: '{{ root_password }}'
       authorized_keys: '{{ ssh_keys }}'
       interfaces:
         - purpose: 'vpc'
-          subnet_id: '{{ (vpc_subnet_info.results | selectattr("item.vpc.region", "eq", region) | map(attribute="subnet.id") | first) }}'
+          subnet_id: '{{ (vpc_subnet_info.results | selectattr("item.vpc.region", "eq", item.1) | map(attribute="subnet.id") | first) }}'
           primary: true
           ipv4:
             nat_1_1: 'any'
       placement_group:
         compliant_only: true
-        id: '{{ (placement_group_info.results | selectattr("placement_group.region", "eq", region) | map(attribute="placement_group"))[(item|int-1) // max_hosts_per_pg].id }}'
+        id: '{{ (placement_group_info.results | selectattr("placement_group.region", "eq", item.1) | map(attribute="placement_group"))[(item[2]|int-1) // max_hosts_per_pg].id }}'
       private_ip: false
       ua_prefix: 'docs-kafka-occ'
-      tags: '{{ linode_tags }}'
+      tags: '{{ linode_tags }},broker{% if (item[2]|int) <= 3 %},controller{% endif %}'
       state: present
       firewall_id: '{{ (firewall_info.firewall|default({})).id|default(omit) }}'
-    vars:
-      placement_group: '{{ placement_group_info.results[(item|int-1) // max_hosts_per_pg].placement_group }}'
-    with_sequence: count='{{ cluster_size }}'
-    when: (instance_prefix + item) not in existing_instances
+    with_nested:
+      - "{{ instance_prefix }}"
+      - "{{ region }}"
+      - "{{ query('sequence', 'count={{cluster_size}} format=%03d') }}"
+    when: (item | join('-')) not in existing_instances
 
   - name: get info about the instances
     linode.cloud.instance_info:
       api_token: '{{ api_token }}'
-      label: '{{ instance_prefix }}{{ item }}'
+      label: '{{ instance_prefix }}-{{ item | join("-") }}'
     register: info
-    with_sequence: count='{{ cluster_size }}'
+    with_nested:
+      - '{{ region }}'
+      - "{{ query('sequence', 'count={{cluster_size}} format=%03d') }}"
 
 
 
@@ -232,16 +235,18 @@
     linode.cloud.domain_record:
       api_token: '{{ api_token }}'
       domain_id: '{{ domain_info.domain.id }}'
-      record_id: '{{ item.id }}'
+      record_id: '{{ item[0].id }}'
       state: absent
     vars:
       instance_ips: "{{ dict(info.results | map(attribute='instance.label') | zip(info.results | map(attribute='networking.ipv4.public.0.address'))) }}"
     when:
       - domain_name|d(False)
       - domain_info|d(False)
-      - item.name in instance_ips
-      - item.target != instance_ips[item.name]
-    with_items: "{{ domain_info.records }}"
+      - item[0].name is regex('-' + item[1] + '-')
+      - (item[0].name in instance_ips and item[0].target != instance_ips[item[0].name])
+    with_nested:
+      - "{{ domain_info.records }}"
+      - "{{ region }}"
 
   - name: add new hosts to dns
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/domain_record/

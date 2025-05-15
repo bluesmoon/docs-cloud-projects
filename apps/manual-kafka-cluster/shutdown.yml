@@ -40,7 +40,7 @@
       api_token: '{{ api_token }}'
       filters:
         - name: label
-          values: "{{ [ instance_prefix ] | product(range(1, cluster_size+1)) | map('join') | list }}"
+          values: "{{ [ instance_prefix ] | product([region]|flatten, query('sequence', 'count={{cluster_size}} format=%03d')) | map('join', '-') | list }}"
       order_by: label
     register: existing_instances
 
