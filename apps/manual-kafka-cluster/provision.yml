@@ -297,12 +297,21 @@
         #jinja2: trim_blocks:False
         kafka_data:
           server:
-            {%- for count in range(cluster_size) %}
-            - name: {{ info.results[count].instance.label }}
+            {%- for instance in info.results %}
+            - name: {{ instance.instance.label }}
               instance:
-                hostname: {{ info.results[count].instance.label }}{% if domain_name|d(False) and domain_info %}.{{ domain_name }}{% endif %}
-                ip_pub1: {{ info.results[count].networking.ipv4.public.0.address }}
-                ip_priv1: {{ info.results[count].networking.ipv4.vpc.0.address }}
+                hostname: {{ instance.instance.label }}{% if domain_name|d(False) and domain_info %}.{{ domain_name }}{% endif %}
+                region: {{ instance.instance.region }}
+                ip_pub1: {{ instance.networking.ipv4.public.0.address }}
+                ip_priv1: {{ instance.networking.ipv4.vpc.0.address }}
+                {%- if domain_name|d(False) %}
+                aliases:
+                  - {{ instance.instance.label }}.{{ domain_name }}
+                  {%- if ('broker' in instance.instance.tags) %}
+                  - {{ instance_prefix }}-{{ instance.instance.region }}-broker.{{ domain_name }}{%- endif %}
+                  {%- if ('controller' in instance.instance.tags) %}
+                  - {{ instance_prefix }}-{{ instance.instance.region }}-controller.{{ domain_name }}{%- endif %}
+                {%- endif %}
             {%- endfor %}
 
   - name: add kafka nodes to inventory
@@ -311,9 +320,15 @@
       marker: "# {mark} KAFKA INSTANCES"
       block: |
         #jinja2: trim_blocks:False
-        [kafka]
-        {%- for count in range(cluster_size) %}
-        {{ info.results[count].networking.ipv4.public.0.rdns }} {% if count < controller_count %}role='controller and broker'{%else%}role='broker only'{%endif%}
+        {%- for r in [region]|flatten %}
+        [{{ r }}]
+        {%- for instance in info.results | selectattr('instance.region', 'eq', r) %}
+        {{ instance.networking.ipv4.public.0.rdns }} region='{{ instance.instance.region }}' {% if 'controller' in instance.instance.tags  %}role='controller and broker'{%else%}role='broker only'{%endif%}
+        {%- endfor %}
+        {% endfor %}
+        [kafka:children]
+        {%- for r in [region]|flatten %}
+        {{ r }}
         {%- endfor %}
 
 

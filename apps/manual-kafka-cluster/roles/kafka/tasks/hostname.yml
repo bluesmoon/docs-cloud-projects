@@ -7,8 +7,12 @@
     marker: "# {mark} KAFKA HOSTS"
     block: |
       #jinja2: trim_blocks:False
-      {%- for count in range(cluster_size) %}
-      {{ kafka_data.server[count].instance.ip_priv1 }} {{ kafka_data.server[count].instance.hostname }} {{ kafka_data.server[count].name }}
+      {%- for server in kafka_data.server %}
+      {%- if server.instance.region == hostvars[inventory_hostname].region %}
+      {{ server.instance.ip_priv1 }} {{ server.instance.hostname }} {{ server.name }}
+      {%- else %}
+      {{ server.instance.ip_pub1 }} {{ server.instance.hostname }} {{ server.name }}
+      {%- endif %}
       {%- endfor %}
 
 - name: configure hostnames
