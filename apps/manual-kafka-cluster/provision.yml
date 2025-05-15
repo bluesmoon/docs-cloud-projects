@@ -175,6 +175,10 @@
       - '{{ region }}'
       - "{{ query('sequence', 'count={{cluster_size}} format=%03d') }}"
 
+  - name: create broker and controller lists
+    set_fact:
+      all_hosts: "{{ all_hosts|d([]) + [{ 'id': item.instance.id, 'ip': item.networking.ipv4.public.0.address, 'region': item.instance.region, 'iscontroller': item.instance.tags is contains('controller') }] }}"
+    with_items: '{{ info.results }}'
 
 
   # Update Firewall
@@ -230,7 +234,7 @@
     when: domain_name|d(False)
     register: domain_info
 
-  - name: remove old hosts from dns
+  - name: remove old hosts, brokers, and controllers from dns
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/domain_record/
     linode.cloud.domain_record:
       api_token: '{{ api_token }}'
@@ -243,7 +247,9 @@
       - domain_name|d(False)
       - domain_info|d(False)
       - item[0].name is regex('-' + item[1] + '-')
-      - (item[0].name in instance_ips and item[0].target != instance_ips[item[0].name])
+      - (item[0].name in instance_ips and item[0].target != instance_ips[item[0].name]) or
+        (item[0].name == instance_prefix + '-' + item[1] + '-broker' and item[0].target not in (all_hosts | rejectattr('iscontroller') | map(attribute='ip')) ) or
+        (item[0].name == instance_prefix + '-' + item[1] + '-controller' and item[0].target not in (all_hosts | selectattr('iscontroller') | map(attribute='ip')) )
     with_nested:
       - "{{ domain_info.records }}"
       - "{{ region }}"
@@ -259,6 +265,23 @@
       type: 'A'
       state: present
     with_items: "{{ info.results }}"
+    when:
+      - domain_name|d(False)
+      - domain_info|d(False)
+
+  - name: add new brokers and controllers to dns
+    # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/domain_record/
+    linode.cloud.domain_record:
+      api_token: '{{ api_token }}'
+      domain_id: '{{ domain_info.domain.id }}'
+      name: '{{ instance_prefix }}-{{ item[0].region }}-{% if item[1] and item[0].iscontroller %}controller{% else %}broker{% endif %}'
+      target: '{{ item[0].ip }}'
+      ttl_sec: '{{ ttl_sec | default(omit) }}'
+      type: 'A'
+      state: present
+    with_nested:
+      -  "{{ all_hosts }}"
+      - [false, true]     # This runs the list twice for brokers and once for controllers
     when:
       - domain_name|d(False)
       - domain_info|d(False)
