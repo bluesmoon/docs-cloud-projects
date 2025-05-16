@@ -75,16 +75,11 @@
 
 - name: generate server key
   community.crypto.openssl_privatekey:
-    path: '{{ kafka_ssl_key_directory }}/{{ kafka_data.server[count].instance.hostname }}.key'
+    path: '{{ kafka_ssl_key_directory }}/{{ hostname_map[inventory_hostname].instance.hostname }}.key'
     owner: kafka
     group: kafka
     mode: '0600'
     return_content: true
-  run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['kafka'] }}"
-  loop_control:
-    index_var: count
 
 - name: generate client key
   community.crypto.openssl_privatekey:
@@ -100,23 +95,18 @@
 
 - name: generate server csr
   community.crypto.openssl_csr:
-    path: '{{ kafka_ssl_req_directory }}/{{ kafka_data.server[count].instance.hostname }}.csr'
-    privatekey_path: '{{ kafka_ssl_key_directory }}/{{ kafka_data.server[count].instance.hostname }}.key'
+    path: '{{ kafka_ssl_req_directory }}/{{ hostname_map[inventory_hostname].instance.hostname }}.csr'
+    privatekey_path: '{{ kafka_ssl_key_directory }}/{{ hostname_map[inventory_hostname].instance.hostname }}.key'
     country_name: '{{ country_name }}'
     state_or_province_name: '{{ state_or_province_name }}'
     locality_name: '{{ locality_name }}'
     organization_name: '{{ organization_name }}'
     email_address: '{{ email_address }}'
-    common_name: '{{ kafka_data.server[count].instance.hostname }}'
+    common_name: '{{ hostname_map[inventory_hostname].instance.hostname }}'
     use_common_name_for_san: false
-    subject_alt_name: '{{ ["DNS:"] | product(kafka_data.server[count].instance.aliases) | map("join") }}'
+    subject_alt_name: '{{ ["DNS:"] | product(hostname_map[inventory_hostname].instance.aliases) | map("join") }}'
     owner: kafka
     group: kafka
-  run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['kafka'] }}"
-  loop_control:
-    index_var: count
 
 - name: generate client csr
   community.crypto.openssl_csr:
@@ -230,19 +220,14 @@
 
 - name: add server certs to truststore
   community.general.java_cert:
-    cert_content: '{{ item.certificate }}'
+    cert_content: '{{ server_certs.certificate }}'
     keystore_path: '{{ kafka_ssl_truststore_directory }}/server.truststore.jks'
     keystore_pass: '{{ truststore_password }}'
     keystore_create: true
     state: present
-    cert_alias: '{{ kafka_data.server[count].instance.hostname }}'
+    cert_alias: '{{ hostname_map[inventory_hostname].instance.hostname }}'
     owner: kafka
     group: kafka  
-  loop: "{{ server_certs.results }}"
-  loop_control:
-    index_var: count
-  run_once: true
-  delegate_to: "{{ groups['kafka'][0] }}"
       
 - name: add client certs to truststore
   community.general.java_cert:

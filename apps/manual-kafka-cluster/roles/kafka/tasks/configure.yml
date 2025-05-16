@@ -8,6 +8,8 @@
     mode: 0755
     owner: kafka
     group: kafka
+  when:
+    - hostvars[inventory_hostname].region == region_name
 
 - name: backup server and broker properties
   copy:
@@ -21,6 +23,29 @@
     - { config: 'server.properties' }
     - { config: 'broker.properties' }
 
+- name: 'subset of {{ region_name }} servers'
+  set_fact:
+    cluster_servers: '{{ (kafka_data.server | selectattr("instance.region", "eq", region_name))[0:3]
+                         | map(attribute="instance.hostname") }}'
+  run_once: true
+  delegate_to: localhost
+
+- name: '{{ region_name }} bootstrap servers'
+  set_fact:
+    region_bootstrap_servers: '{{ cluster_servers
+                                   | zip_longest([], fillvalue=":9092")
+                                   | map("join") }}'
+
+- name: '{{ region_name }} servers and voters'
+  set_fact:
+    region_bootstrap_servers: '{{ region_bootstrap_servers | join(", ") }}'
+    quorum_voters: '{{ query("sequence", "", start=1, count=3, format="%d@")
+                       | zip(region_bootstrap_servers)
+                       | map("join")
+                       | join(", ") }}'
+  run_once: true
+  delegate_to: localhost
+
 # for servers that are controller and broker roles
 - name: updating kafka config for controller and broker
   template:
@@ -31,10 +56,10 @@
     mode: 0644
   run_once: true
   delegate_to: "{{ item }}"
-  loop: "{{ groups['kafka'] }}"
+  loop: "{{ groups[region_name] }}"
   loop_control:
     index_var: count
-  when: hostvars[groups['kafka'][count]].role == 'controller and broker'
+  when: hostvars[groups[region_name][count]].role == 'controller and broker'
 
 # for servers who are brokers only
 - name: updating kafka config for broker only
@@ -46,10 +71,10 @@
     mode: 0644
   run_once: true
   delegate_to: "{{ item }}"
-  loop: "{{ groups['kafka'] }}"
+  loop: "{{ groups[region_name] }}"
   loop_control:
     index_var: count
-  when: hostvars[groups['kafka'][count]].role == 'broker only'
+  when: hostvars[groups[region_name][count]].role == 'broker only'
 
 - name: check existing kafka cluster uuid
   shell:
@@ -57,7 +82,7 @@
     removes: "{{ kafka_data_directory}}/data/kraft-combined-logs/meta.properties"
   register: old_cluster_uuid
   run_once: true
-  delegate_to: "{{ groups['kafka'][0] }}"
+  delegate_to: "{{ groups[region_name][0] }}"
 
 - name: create kafka cluster uuid
   command:
@@ -65,41 +90,28 @@
     creates: "{{ kafka_data_directory}}/data/kraft-combined-logs/meta.properties"
   register: new_cluster_uuid
   run_once: true
-  delegate_to: "{{ groups['kafka'][0] }}"
+  delegate_to: "{{ groups[region_name][0] }}"
 
 - name: determine kafka cluster uuid
   set_fact:
     cluster_uuid: "{{ (old_cluster_uuid.changed) | ternary(old_cluster_uuid.stdout, new_cluster_uuid.stdout) }}"
   run_once: true
-  delegate_to: "{{ groups['kafka'][0] }}"
+  delegate_to: "{{ groups[region_name][0] }}"
 
 - name: format data directory for controller and broker nodes
   command:
     cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/config/kraft/server.properties --ignore-formatted"
   become: true
   become_user: kafka
-  run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['kafka'] }}"
-  loop_control:
-    index_var: count
-  when: hostvars[groups['kafka'][count]].role == 'controller and broker'
+  when:
+    - hostvars[inventory_hostname].region == region_name
+    - hostvars[inventory_hostname].role == 'controller and broker'
 
 - name: format data directory broker nodes
   command:
     cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/config/kraft/broker.properties --ignore-formatted"
   become: true
   become_user: kafka
-  run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['kafka'] }}"
-  loop_control:
-    index_var: count
-  when: hostvars[groups['kafka'][count]].role == 'broker only'
-
-- name: starting kafka
-  systemd:
-    name: kafka
-    state: started
-    enabled: true
-    daemon_reload: true
+  when:
+    - hostvars[inventory_hostname].region == region_name
+    - hostvars[inventory_hostname].role == 'broker only'

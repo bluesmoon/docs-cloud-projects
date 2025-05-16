@@ -7,6 +7,32 @@
 - name: create kafka user
   import_tasks: user.yml
 
+- name: 'primary region'
+  set_fact:
+    primary_region: '{{ ([region] | flatten)[0] }}'
+  run_once: true
+  delegate_to: localhost
+
+- name: 'primary region bootstrap servers'
+  set_fact:
+    primary_bootstrap_servers: '{{ (kafka_data.server
+                                     | selectattr("instance.region", "eq", primary_region))[0:3]
+                                   | map(attribute="instance.hostname")
+                                   | product([":9092"])
+                                   | map("join")
+                                   | join(", ") }}'
+  run_once: true
+  delegate_to: localhost
+
+- name: 'map inventory hosts to group vars'
+  set_fact:
+    hostname_map: '{{ hostname_map|d({}) | combine({ item: kafka_data.server[count] }) }}'
+  loop: "{{ groups['kafka'] }}"
+  loop_control:
+    index_var: count
+  run_once: true
+  delegate_to: localhost
+
 - name: installing kafka
   import_tasks: install.yml
 
@@ -14,4 +40,7 @@
   import_tasks: ssl.yml
 
 - name: configure kafka
-  import_tasks: configure.yml
+  include_tasks: configure.yml
+  loop: '{{ [region] | flatten }}'
+  loop_control:
+    loop_var: region_name
