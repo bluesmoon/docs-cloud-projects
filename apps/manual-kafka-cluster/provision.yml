@@ -53,6 +53,7 @@
     register: vpc_subnet_info
     ignore_errors: true
     with_items: '{{ vpc_info.results }}'
+    failed_when: false
     when:
       - vpc_label|d(False)
       - item.vpc.id
@@ -66,8 +67,8 @@
       vpc_id: '{{ item.item.vpc.id }}'
     when:
       - vpc_label|d(False)
-      - vpc_subnet_info is succeeded
       - item is succeeded
+      - (item.msg|d('')) is not match('Failed to get VPC Subnet with label')
       - item.subnet.ipv4 != vpc_subnet
     with_items: '{{ vpc_subnet_info.results }}'
 
@@ -170,6 +171,50 @@
       label: '{{ instance_prefix }}{{ item }}'
     register: info
     with_sequence: count='{{ cluster_size }}'
+
+
+
+  # Update Firewall
+
+  - name: get updated firewall info
+    # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/firewall_info/
+    linode.cloud.firewall_info:
+      label: '{{ firewall_label }}'
+      api_token: '{{ api_token }}'
+    register: firewall_info
+    when: firewall_label|d(False)
+
+  - name: add vpc subnet and hosts to firewall
+    # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/firewall/
+    linode.cloud.firewall:
+      api_token: '{{ api_token }}'
+      label: '{{ firewall_label }}'
+      devices: '{{ firewall_info.firewall.entities | map("dict2items") | map("selectattr", "key", "in", ["id", "type"]) | map("items2dict") }}'
+      rules:
+        inbound: '{{ (firewall_info.firewall.rules.inbound | rejectattr("label", "in", ["accept-" + vpc_label, "accept-cluster-hosts"])) + new_firewall_rules }}'
+        inbound_policy: '{{ firewall_info.firewall.rules.inbound_policy }}'
+        outbound: '{{ firewall_info.firewall.rules.outbound }}'
+        outbound_policy: '{{ firewall_info.firewall.rules.outbound_policy }}'
+      status: '{{ firewall_info.firewall.status }}'
+      tags: '{{ firewall_info.firewall.tags }}'
+      state: 'present'
+    vars:
+      new_firewall_rules:
+        - action: 'ACCEPT'
+          label: 'accept-{{ vpc_label }}'
+          description: 'Allow connections between kafka nodes in the same VPC'
+          protocol: 'TCP'
+          addresses:
+            ipv4: '{{ vpc_subnet }}'
+          ports: '9092,9093'
+        - action: 'ACCEPT'
+          label: 'accept-cluster-hosts'
+          description: 'Allow connections between kafka nodes in all clusters'
+          protocol: 'TCP'
+          addresses:
+            ipv4: '{{ all_hosts | map(attribute="ip") | product(["/32"]) | map("join") | list }}'
+          ports: '9092,9093'
+    when: firewall_label|d(False)
 
 
   # DNS

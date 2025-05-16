@@ -25,6 +25,7 @@
     - ufw
     - acl
     state: latest
+  register: package_updates
 
 - name: fail2ban jail.local
   copy:
@@ -47,5 +48,12 @@
 - name: apply ufw rules
   import_tasks: ufw_rules.yml
 
+- name: Check if reboot required
+  stat:
+    path: /var/run/reboot-required
+  register: reboot_required_file
+
 - name: reboot linode
   reboot:
+  when:
+    - reboot_required_file.stat.exists == true
