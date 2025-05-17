@@ -109,6 +109,7 @@
     email_address: '{{ email_address }}'
     common_name: '{{ kafka_data.server[count].instance.hostname }}'
     use_common_name_for_san: false
+    subject_alt_name: '{{ ["DNS:"] | product(kafka_data.server[count].instance.aliases) | map("join") }}'
     owner: kafka
     group: kafka
   run_once: true
