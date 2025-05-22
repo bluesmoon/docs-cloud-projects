@@ -1,7 +1,7 @@
 ---
 # global vars
 #kafka_version: 3.8.0
-kafka_config_directory: /etc/kafka
+kafka_config_directory: /etc/kafka/config
 kafka_bin_directory: /etc/kafka/bin
 kafka_data_directory: /var/lib/kafka
 kafka_log_directory: /var/log/kafka

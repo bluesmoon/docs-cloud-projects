@@ -36,7 +36,7 @@
 - name: set fact for servers who are broker and controller
   set_fact:
     myrole: 'broker and controller'
-    server_properties: /etc/kafka/config/kraft/server.properties
+    server_properties: '{{ kafka_config_directory }}/kraft/server.properties'
   run_once: true
   delegate_to: localhost
 
@@ -54,7 +54,7 @@
 - name: set fact for broker only
   set_fact:
     myrole: broker
-    server_properties: /etc/kafka/config/kraft/broker.properties
+    server_properties: '{{ kafka_config_directory }}/kraft/broker.properties'
   run_once: true
   delegate_to: localhost
 

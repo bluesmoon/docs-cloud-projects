@@ -13,15 +13,15 @@
 
 - name: backup server and broker properties
   copy:
-    src: "{{ kafka_config_directory }}/config/kraft/{{ item.config }}"
-    dest: "{{ kafka_config_directory }}/config/kraft/{{ item.config }}.bak"
+    src: "{{ kafka_config_directory }}/{{ item.config }}"
+    dest: "{{ kafka_config_directory }}/{{ item.config }}.bak"
     owner: kafka
     group: kafka
     mode: 0644
     remote_src: true
   loop:
-    - { config: 'server.properties' }
-    - { config: 'broker.properties' }
+    - { config: 'kraft/server.properties' }
+    - { config: 'kraft/broker.properties' }
 
 - name: 'subset of {{ region_name }} servers'
   set_fact:
@@ -50,7 +50,7 @@
 - name: updating kafka config for controller and broker
   template:
     src: templates/server.properties.j2
-    dest: "{{ kafka_config_directory }}/config/kraft/server.properties"
+    dest: "{{ kafka_config_directory }}/kraft/server.properties"
     owner: kafka
     group: kafka
     mode: 0644
@@ -65,7 +65,7 @@
 - name: updating kafka config for broker only
   template:
     src: templates/broker.properties.j2
-    dest: "{{ kafka_config_directory }}/config/kraft/broker.properties"
+    dest: "{{ kafka_config_directory }}/kraft/broker.properties"
     owner: kafka
     group: kafka
     mode: 0644
@@ -100,7 +100,7 @@
 
 - name: format data directory for controller and broker nodes
   command:
-    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/config/kraft/server.properties --ignore-formatted"
+    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/kraft/server.properties --ignore-formatted"
   become: true
   become_user: kafka
   when:
@@ -109,7 +109,7 @@
 
 - name: format data directory broker nodes
   command:
-    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/config/kraft/broker.properties --ignore-formatted"
+    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/kraft/broker.properties --ignore-formatted"
   become: true
   become_user: kafka
   when:
