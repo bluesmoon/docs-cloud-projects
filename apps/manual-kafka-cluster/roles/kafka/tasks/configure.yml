@@ -35,6 +35,8 @@
     region_bootstrap_servers: '{{ cluster_servers
                                    | zip_longest([], fillvalue=":9092")
                                    | map("join") }}'
+  run_once: true
+  delegate_to: localhost
 
 - name: '{{ region_name }} servers and voters'
   set_fact:
@@ -46,35 +48,19 @@
   run_once: true
   delegate_to: localhost
 
-# for servers that are controller and broker roles
-- name: updating kafka config for controller and broker
+- name: updating kafka config for controllers and brokers
   template:
-    src: templates/server.properties.j2
-    dest: "{{ kafka_config_directory }}/kraft/server.properties"
+    src: templates/{{ server_properties | basename }}.j2
+    dest: "{{ server_properties }}"
     owner: kafka
     group: kafka
     mode: 0644
-  run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups[region_name] }}"
-  loop_control:
-    index_var: count
-  when: hostvars[groups[region_name][count]].role == 'controller and broker'
-
-# for servers who are brokers only
-- name: updating kafka config for broker only
-  template:
-    src: templates/broker.properties.j2
-    dest: "{{ kafka_config_directory }}/kraft/broker.properties"
-    owner: kafka
-    group: kafka
-    mode: 0644
-  run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups[region_name] }}"
-  loop_control:
-    index_var: count
-  when: hostvars[groups[region_name][count]].role == 'broker only'
+    backup: true
+    force: true
+  vars:
+    node_id: '{{ (groups[region_name] | index_of("eq", inventory_hostname)) + 1 }}'
+    listener: '{{ hostname_map[inventory_hostname].instance.hostname }}'
+    server_properties: "{{ role_properties[hostvars[inventory_hostname].role] }}"
 
 - name: check existing kafka cluster uuid
   shell:
@@ -96,22 +82,14 @@
   set_fact:
     cluster_uuid: "{{ (old_cluster_uuid.changed) | ternary(old_cluster_uuid.stdout, new_cluster_uuid.stdout) }}"
   run_once: true
-  delegate_to: "{{ groups[region_name][0] }}"
+  delegate_to: localhost
 
-- name: format data directory for controller and broker nodes
+- name: format data directory for controllers and brokers
   command:
-    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/kraft/server.properties --ignore-formatted"
+    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ server_properties }} --ignore-formatted"
   become: true
   become_user: kafka
+  vars:
+    server_properties: "{{ role_properties[hostvars[inventory_hostname].role] }}"
   when:
     - hostvars[inventory_hostname].region == region_name
-    - hostvars[inventory_hostname].role == 'controller and broker'
-
-- name: format data directory broker nodes
-  command:
-    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/kraft/broker.properties --ignore-formatted"
-  become: true
-  become_user: kafka
-  when:
-    - hostvars[inventory_hostname].region == region_name
-    - hostvars[inventory_hostname].role == 'broker only'

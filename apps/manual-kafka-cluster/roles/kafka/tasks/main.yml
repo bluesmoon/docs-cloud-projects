@@ -44,3 +44,20 @@
   loop: '{{ [region] | flatten }}'
   loop_control:
     loop_var: region_name
+
+- name: starting kafka
+  systemd:
+    name: kafka
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: starting mirror-maker
+  systemd:
+    name: mirror-maker
+    state: restarted
+    enabled: true
+    daemon_reload: true
+  when:
+    - hostvars[inventory_hostname].region != primary_region
+    - hostvars[inventory_hostname].role == 'controller and broker'

@@ -33,38 +33,18 @@
     owner: kafka
     group: kafka
 
-- name: set fact for servers who are broker and controller
+- name: set role_properties files
   set_fact:
-    myrole: 'broker and controller'
-    server_properties: '{{ kafka_config_directory }}/kraft/server.properties'
+    role_properties:
+      "controller and broker": "{{ kafka_config_directory }}/kraft/server.properties"
+      "broker only": "{{ kafka_config_directory }}/kraft/broker.properties"
   run_once: true
   delegate_to: localhost
 
-- name: add kafka systemd service file for broker and controller
+- name: add kafka systemd service file
   template:
     src: templates/kafka.service.j2
     dest: /lib/systemd/system/kafka.service
-  run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['kafka'] }}"
-  loop_control:
-    index_var: count
-  when: hostvars[groups['kafka'][count]].role == 'controller and broker'
-
-- name: set fact for broker only
-  set_fact:
-    myrole: broker
-    server_properties: '{{ kafka_config_directory }}/kraft/broker.properties'
-  run_once: true
-  delegate_to: localhost
-
-- name: add kafka systemd service file for brokers
-  template:
-    src: templates/kafka.service.j2
-    dest: /lib/systemd/system/kafka.service
-  run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['kafka'] }}"
-  loop_control:
-    index_var: count
-  when: hostvars[groups['kafka'][count]].role == 'broker only'
+  vars:
+    myrole: "{{ hostvars[inventory_hostname].role }}"
+    server_properties: "{{ role_properties[hostvars[inventory_hostname].role] }}"
