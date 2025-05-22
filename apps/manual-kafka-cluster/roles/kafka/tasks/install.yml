@@ -48,3 +48,10 @@
   vars:
     myrole: "{{ hostvars[inventory_hostname].role }}"
     server_properties: "{{ role_properties[hostvars[inventory_hostname].role] }}"
+
+- name: add kafka mirror-maker systemd service file for broker and controller
+  ansible.builtin.template:
+    src: templates/mirror-maker.service.j2
+    dest: "/usr/lib/systemd/system/mirror-maker.service"
+  when:
+    - hostvars[inventory_hostname].role == 'controller and broker'

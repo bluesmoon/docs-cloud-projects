@@ -50,6 +50,35 @@
     listener: '{{ hostname_map[inventory_hostname].instance.hostname }}'
     server_properties: "{{ role_properties[hostvars[inventory_hostname].role] }}"
 
+# mirror-maker for servers that are controller and broker roles
+- name: updating kafka mirror maker config for controller and broker
+  template:
+    src: templates/connect-mirror-maker.properties.j2
+    dest: "{{ kafka_config_directory }}/connect-mirror-maker.properties"
+    owner: kafka
+    group: kafka
+    mode: 0644
+    backup: true
+    force: true
+  vars:
+    listener: '{{ hostname_map[inventory_hostname].instance.hostname }}'
+  when:
+    - hostvars[inventory_hostname].region == region_name
+    - hostvars[inventory_hostname].role == 'controller and broker'
+
+# client-properties for all servers for admin tasks
+- name: updating kafka client properties
+  template:
+    src: templates/client.properties.j2
+    dest: "{{ kafka_config_directory }}/client.properties"
+    owner: kafka
+    group: kafka
+    mode: 0644
+    backup: true
+    force: true
+  when:
+    - hostvars[inventory_hostname].region == region_name
+
 - name: check existing kafka cluster uuid
   shell:
     cmd: grep -s cluster.id {{ kafka_data_directory }}/data/kraft-combined-logs/meta.properties | cut -f 2 -d = || /bin/true

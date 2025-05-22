@@ -1,0 +1,75 @@
+# Licensed to the Apache Software Foundation (ASF) under A or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+# 
+#    http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# see org.apache.kafka.clients.consumer.ConsumerConfig for more details
+
+# Sample MirrorMaker 2.0 top-level configuration file
+# Run with ./bin/connect-mirror-maker.sh connect-mirror-maker.properties 
+
+# cluster aliases
+clusters = primary, secondary
+
+primary.group.id = mirror-maker-{{ region_name }}
+
+# connection information for each cluster
+# This is a comma separated host:port pairs for each cluster
+# for e.g. "A_host1:9092, A_host2:9092, A_host3:9092"
+primary.bootstrap.servers = {{ primary_bootstrap_servers }}
+secondary.bootstrap.servers = {{ region_bootstrap_servers }}
+
+# Secure connections
+security.protocol=SSL
+ssl.truststore.location={{ kafka_ssl_directory }}/truststore/server.truststore.jks
+ssl.truststore.password={{ truststore_password}}
+ssl.keystore.location={{ kafka_ssl_directory }}/keystore/connect-mirror-maker.keystore.jks
+ssl.keystore.password={{ keystore_password }}
+
+
+#admin.ssl.keystore.location={{ kafka_ssl_directory }}/keystore/{{ listener }}.keystore.jks
+#admin.ssl.keystore.password={{ keystore_password }}
+
+# enable and configure replication flow from primary to secondary
+primary->secondary.enabled = true
+
+# replicate all topics
+primary->secondary.topics = .*
+
+# avoid reading aborted transactions
+primary.consumer.isolation.level = read_committed
+
+# exactly once semantics for the secondary to avoid duplicates
+secondary.exactly.once.source.support = enabled
+
+dedicated.mode.enable.internal.rest = true
+listeners = http://{{ listener }}:8083
+
+# Setting replication factor of newly created remote topics
+replication.factor=3
+
+tasks.max = 5
+
+############################# Internal Topic Settings  #############################
+# The replication factor for mm2 internal topics "heartbeats", "B.checkpoints.internal" and
+# "mm2-offset-syncs.B.internal"
+# For anything other than development testing, a value greater than 1 is recommended to ensure availability such as 3.
+checkpoints.topic.replication.factor=3
+heartbeats.topic.replication.factor=3
+offset-syncs.topic.replication.factor=3
+
+# The replication factor for connect internal topics "mm2-configs.B.internal", "mm2-offsets.B.internal" and
+# "mm2-status.B.internal"
+# For anything other than development testing, a value greater than 1 is recommended to ensure availability such as 3.
+offset.storage.replication.factor=3
+status.storage.replication.factor=3
+config.storage.replication.factor=3
