@@ -1,16 +1,6 @@
 ---
 # configure kafka 
 
-- name: create kafka data and log directory
-  file:
-    path: "{{ kafka_log_directory }}"
-    state: directory
-    mode: 0755
-    owner: kafka
-    group: kafka
-  when:
-    - hostvars[inventory_hostname].region == region_name
-
 - name: 'subset of {{ region_name }} servers'
   set_fact:
     cluster_servers: '{{ (kafka_data.server | selectattr("instance.region", "eq", region_name))[0:3]
@@ -67,19 +57,6 @@
   when:
     - hostvars[inventory_hostname].region == region_name
     - hostvars[inventory_hostname].role == 'controller and broker'
-
-# client-properties for all servers for admin tasks
-- name: updating kafka client properties
-  template:
-    src: templates/client.properties.j2
-    dest: "{{ kafka_config_directory }}/client.properties"
-    owner: kafka
-    group: kafka
-    mode: 0644
-    backup: true
-    force: true
-  when:
-    - hostvars[inventory_hostname].region == region_name
 
 - name: check existing kafka cluster uuid
   shell:

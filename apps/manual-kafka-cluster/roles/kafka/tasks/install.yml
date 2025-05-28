@@ -47,3 +47,22 @@
     dest: "/usr/lib/systemd/system/mirror-maker.service"
   when:
     - hostvars[inventory_hostname].role == 'controller and broker'
+
+- name: create kafka data and log directory
+  file:
+    path: "{{ kafka_log_directory }}"
+    state: directory
+    mode: 0755
+    owner: kafka
+    group: kafka
+
+# client-properties for all servers for admin tasks
+- name: updating kafka client properties
+  template:
+    src: templates/client.properties.j2
+    dest: "{{ kafka_config_directory }}/client.properties"
+    owner: kafka
+    group: kafka
+    mode: 0644
+    backup: true
+    force: true
