@@ -11,18 +11,6 @@
   when:
     - hostvars[inventory_hostname].region == region_name
 
-- name: backup server and broker properties
-  copy:
-    src: "{{ kafka_config_directory }}/{{ item.config }}"
-    dest: "{{ kafka_config_directory }}/{{ item.config }}.bak"
-    owner: kafka
-    group: kafka
-    mode: 0644
-    remote_src: true
-  loop:
-    - { config: 'kraft/server.properties' }
-    - { config: 'kraft/broker.properties' }
-
 - name: 'subset of {{ region_name }} servers'
   set_fact:
     cluster_servers: '{{ (kafka_data.server | selectattr("instance.region", "eq", region_name))[0:3]
