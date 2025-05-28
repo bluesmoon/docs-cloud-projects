@@ -46,9 +46,11 @@
     backup: true
     force: true
   vars:
-    node_id: '{{ (groups[region_name] | index_of("eq", inventory_hostname)) + 1 }}'
+    node_id: '{{ (groups[region_name] | ansible.utils.index_of("eq", inventory_hostname)) + 1 }}'
     listener: '{{ hostname_map[inventory_hostname].instance.hostname }}'
-    server_properties: "{{ role_properties[hostvars[inventory_hostname].role] }}"
+    server_properties: "{{ kafka_config_directory }}/{{ role_properties[hostvars[inventory_hostname].role] }}"
+  when:
+    - hostvars[inventory_hostname].region == region_name
 
 # mirror-maker for servers that are controller and broker roles
 - name: updating kafka mirror maker config for controller and broker
@@ -107,6 +109,6 @@
   become: true
   become_user: kafka
   vars:
-    server_properties: "{{ role_properties[hostvars[inventory_hostname].role] }}"
+    server_properties: "{{ kafka_config_directory }}/{{ role_properties[hostvars[inventory_hostname].role] }}"
   when:
     - hostvars[inventory_hostname].region == region_name

@@ -33,21 +33,13 @@
     owner: kafka
     group: kafka
 
-- name: set role_properties files
-  set_fact:
-    role_properties:
-      "controller and broker": "{{ kafka_config_directory }}/kraft/server.properties"
-      "broker only": "{{ kafka_config_directory }}/kraft/broker.properties"
-  run_once: true
-  delegate_to: localhost
-
 - name: add kafka systemd service file
   template:
     src: templates/kafka.service.j2
     dest: /lib/systemd/system/kafka.service
   vars:
     myrole: "{{ hostvars[inventory_hostname].role }}"
-    server_properties: "{{ role_properties[hostvars[inventory_hostname].role] }}"
+    server_properties: "{{ kafka_config_directory }}/{{ role_properties[hostvars[inventory_hostname].role] }}"
 
 - name: add kafka mirror-maker systemd service file for broker and controller
   ansible.builtin.template:
