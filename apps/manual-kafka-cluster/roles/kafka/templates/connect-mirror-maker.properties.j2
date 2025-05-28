@@ -18,7 +18,7 @@
 # Run with ./bin/connect-mirror-maker.sh connect-mirror-maker.properties 
 
 # cluster aliases
-clusters = primary, secondary
+clusters = {{ remote_region }}, {{ region_name }}
 
 group.id = mirror-maker-{{ region_name }}
 client.id = mirror-maker-{{ hostname_map[inventory_hostname].name }}
@@ -26,8 +26,8 @@ client.id = mirror-maker-{{ hostname_map[inventory_hostname].name }}
 # connection information for each cluster
 # This is a comma separated host:port pairs for each cluster
 # for e.g. "A_host1:9092, A_host2:9092, A_host3:9092"
-primary.bootstrap.servers = {{ primary_bootstrap_servers }}
-secondary.bootstrap.servers = {{ region_bootstrap_servers }}
+{{ remote_region }}.bootstrap.servers = {{ remote_bootstrap_servers }}
+{{ region_name }}.bootstrap.servers = {{ region_bootstrap_servers }}
 
 # Secure connections
 security.protocol=SSL
@@ -40,14 +40,14 @@ ssl.keystore.password={{ keystore_password }}
 #listeners.https.ssl.keystore.location={{ kafka_ssl_directory }}/keystore/{{ listener }}.keystore.jks
 #listeners.https.ssl.keystore.password={{ keystore_password }}
 
-# enable and configure replication flow from primary to secondary
-primary->secondary.enabled = true
+# enable and configure replication flow from {{ remote_region }} to {{ region_name }}
+{{ remote_region }}->{{ region_name }}.enabled = true
 
 # replicate all topics
-primary->secondary.topics = .*
+{{ remote_region }}->{{ region_name }}.topics = .*
 
 # avoid reading aborted transactions
-primary.consumer.isolation.level = read_committed
+{{ remote_region }}.consumer.isolation.level = read_committed
 
 refresh.topics.interval.seconds = 30
 sync.topic.acls.enabled = false
@@ -55,8 +55,8 @@ sync.topic.configs.interval.seconds = 30
 refresh.groups.interval.seconds = 30
 sync.group.offsets.enabled = true
 
-# exactly once semantics for the secondary to avoid duplicates
-secondary.exactly.once.source.support = enabled
+# exactly once semantics for the {{ region_name }} to avoid duplicates
+{{ region_name }}.exactly.once.source.support = enabled
 
 dedicated.mode.enable.internal.rest = true
 listeners = http://:8083

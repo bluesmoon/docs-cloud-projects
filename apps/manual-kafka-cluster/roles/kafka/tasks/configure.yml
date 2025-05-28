@@ -1,6 +1,23 @@
 ---
 # configure kafka 
 
+- name: remote region is the first region that is not the current region
+  set_fact:
+    remote_region: '{{ ([region] | flatten | select("!=", region_name))[0] }}'
+  run_once: true
+  delegate_to: localhost
+
+- name: 'remote region ({{ remote_region }}) bootstrap servers'
+  set_fact:
+    remote_bootstrap_servers: '{{ (kafka_data.server
+                                     | selectattr("instance.region", "eq", remote_region))[0:3]
+                                   | map(attribute="instance.hostname")
+                                   | product([":9092"])
+                                   | map("join")
+                                   | join(", ") }}'
+  run_once: true
+  delegate_to: localhost
+
 - name: 'subset of {{ region_name }} servers'
   set_fact:
     cluster_servers: '{{ (kafka_data.server | selectattr("instance.region", "eq", region_name))[0:3]
@@ -10,7 +27,7 @@
 
 - name: '{{ region_name }} servers and voters'
   set_fact:
-    region_bootstrap_servers: '{{ cluster_servers | zip_longest([], fillvalue=":9092") | map("join") | join(", ") }}'
+    region_bootstrap_servers: '{{ cluster_servers | product([":9092"]) | map("join") | join(", ") }}'
     quorum_voters: '{{ query("sequence", "", start=1, count=3, format="%d@")
                        | zip_longest(cluster_servers, [], fillvalue=":9093")
                        | map("join")

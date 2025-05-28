@@ -15,7 +15,7 @@ Environment="LOG4J_CONFIG=file:/etc/kafka/config/log4j.properties"
 Environment="JMX_PORT=9981"
 Environment="KAFKA_HEAP_OPTS=-Xmx2G -Xms2G"
 
-ExecStart=/etc/kafka/bin/connect-mirror-maker.sh /etc/kafka/config/connect-mirror-maker.properties --clusters secondary
+ExecStart=/etc/kafka/bin/connect-mirror-maker.sh /etc/kafka/config/connect-mirror-maker.properties --clusters {{ hostvars[inventory_hostname].region }}
 
 [Install]
 WantedBy=multi-user.target
