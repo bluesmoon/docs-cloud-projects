@@ -9,4 +9,3 @@
     - group_vars/kafka/secret_vars
   roles:
     - kafka
-    - post
