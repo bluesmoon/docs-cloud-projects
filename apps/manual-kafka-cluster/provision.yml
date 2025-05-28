@@ -213,7 +213,7 @@
           protocol: 'TCP'
           addresses:
             ipv4: '{{ vpc_subnet }}'
-          ports: '9092,9093'
+          ports: '8083,9092,9093'
         - action: 'ACCEPT'
           label: 'accept-cluster-hosts'
           description: 'Allow connections between kafka nodes in all clusters'
