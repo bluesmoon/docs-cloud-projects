@@ -8,19 +8,11 @@
   run_once: true
   delegate_to: localhost
 
-- name: '{{ region_name }} bootstrap servers'
-  set_fact:
-    region_bootstrap_servers: '{{ cluster_servers
-                                   | zip_longest([], fillvalue=":9092")
-                                   | map("join") }}'
-  run_once: true
-  delegate_to: localhost
-
 - name: '{{ region_name }} servers and voters'
   set_fact:
-    region_bootstrap_servers: '{{ region_bootstrap_servers | join(", ") }}'
+    region_bootstrap_servers: '{{ cluster_servers | zip_longest([], fillvalue=":9092") | map("join") | join(", ") }}'
     quorum_voters: '{{ query("sequence", "", start=1, count=3, format="%d@")
-                       | zip(region_bootstrap_servers)
+                       | zip_longest(cluster_servers, [], fillvalue=":9093")
                        | map("join")
                        | join(", ") }}'
   run_once: true
