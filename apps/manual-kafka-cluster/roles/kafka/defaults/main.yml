@@ -1,16 +1,17 @@
 ---
 # global vars
 #kafka_version: 3.8.0
-kafka_config_directory: /etc/kafka/config
-kafka_bin_directory: /etc/kafka/bin
+kafka_install_directory: /etc/kafka
+kafka_config_directory: '{{ kafka_install_directory }}/config'
+kafka_bin_directory: '{{ kafka_install_directory }}/bin'
 kafka_data_directory: /var/lib/kafka
 kafka_log_directory: /var/log/kafka
 
 # ssl
-kafka_ssl_directory: /etc/kafka/ssl
-kafka_ssl_ca_directory: /etc/kafka/ssl/ca
-kafka_ssl_req_directory: /etc/kafka/ssl/req
-kafka_ssl_key_directory: /etc/kafka/ssl/key
-kafka_ssl_cert_directory: /etc/kafka/ssl/cert
-kafka_ssl_keystore_directory: /etc/kafka/ssl/keystore
-kafka_ssl_truststore_directory: /etc/kafka/ssl/truststore
+kafka_ssl_directory: '{{ kafka_install_directory }}/ssl'
+kafka_ssl_ca_directory: '{{ kafka_ssl_directory }}/ca'
+kafka_ssl_req_directory: '{{ kafka_ssl_directory }}/req'
+kafka_ssl_key_directory: '{{ kafka_ssl_directory }}/key'
+kafka_ssl_cert_directory: '{{ kafka_ssl_directory }}/cert'
+kafka_ssl_keystore_directory: '{{ kafka_ssl_directory }}/keystore'
+kafka_ssl_truststore_directory: '{{ kafka_ssl_directory }}/truststore'

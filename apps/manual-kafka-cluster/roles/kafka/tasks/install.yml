@@ -3,7 +3,7 @@
 
 - name: create kafka config directory
   file:
-    path: "{{ kafka_config_directory }}"
+    path: "{{ kafka_install_directory }}"
     state: directory
     mode: 0755
     owner: kafka
@@ -21,13 +21,13 @@
 - name: untar kafka archive
   unarchive:
     src: "/tmp/kafka_2.13-{{ kafka_version }}.tgz"
-    dest: "{{ kafka_config_directory }}"
+    dest: "{{ kafka_install_directory }}"
     extra_opts: [--strip-components=1]
     remote_src: true
 
 - name: updating config directory ownership
   ansible.builtin.file:
-    path: "{{ kafka_config_directory }}"
+    path: "{{ kafka_install_directory }}"
     state: directory
     recurse: yes
     owner: kafka
