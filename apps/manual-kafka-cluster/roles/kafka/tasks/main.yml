@@ -1,6 +1,12 @@
 ---
 # main
 
+- name: 'map inventory hosts to group vars'
+  set_fact:
+    hostname_map: '{{ dict(groups["kafka"] | zip(kafka_data.server) ) }}'
+  run_once: true
+  delegate_to: localhost
+
 - name: configure hostname
   import_tasks: hostname.yml
 
@@ -21,15 +27,6 @@
                                    | product([":9092"])
                                    | map("join")
                                    | join(", ") }}'
-  run_once: true
-  delegate_to: localhost
-
-- name: 'map inventory hosts to group vars'
-  set_fact:
-    hostname_map: '{{ hostname_map|d({}) | combine({ item: kafka_data.server[count] }) }}'
-  loop: "{{ groups['kafka'] }}"
-  loop_control:
-    index_var: count
   run_once: true
   delegate_to: localhost
 
