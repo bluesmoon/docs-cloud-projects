@@ -20,7 +20,8 @@
 # cluster aliases
 clusters = primary, secondary
 
-primary.group.id = mirror-maker-{{ region_name }}
+group.id = mirror-maker-{{ region_name }}
+client.id = mirror-maker-{{ hostname_map[inventory_hostname].name }}
 
 # connection information for each cluster
 # This is a comma separated host:port pairs for each cluster
@@ -36,8 +37,8 @@ ssl.keystore.location={{ kafka_ssl_directory }}/keystore/connect-mirror-maker.ke
 ssl.keystore.password={{ keystore_password }}
 
 
-#admin.ssl.keystore.location={{ kafka_ssl_directory }}/keystore/{{ listener }}.keystore.jks
-#admin.ssl.keystore.password={{ keystore_password }}
+#listeners.https.ssl.keystore.location={{ kafka_ssl_directory }}/keystore/{{ listener }}.keystore.jks
+#listeners.https.ssl.keystore.password={{ keystore_password }}
 
 # enable and configure replication flow from primary to secondary
 primary->secondary.enabled = true
@@ -48,11 +49,17 @@ primary->secondary.topics = .*
 # avoid reading aborted transactions
 primary.consumer.isolation.level = read_committed
 
+refresh.topics.interval.seconds = 30
+sync.topic.acls.enabled = false
+sync.topic.configs.interval.seconds = 30
+refresh.groups.interval.seconds = 30
+sync.group.offsets.enabled = true
+
 # exactly once semantics for the secondary to avoid duplicates
 secondary.exactly.once.source.support = enabled
 
 dedicated.mode.enable.internal.rest = true
-listeners = http://{{ listener }}:8083
+listeners = http://:8083
 
 # Setting replication factor of newly created remote topics
 replication.factor=3
