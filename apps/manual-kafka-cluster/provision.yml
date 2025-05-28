@@ -220,7 +220,7 @@
           protocol: 'TCP'
           addresses:
             ipv4: '{{ all_hosts | map(attribute="ip") | product(["/32"]) | map("join") | list }}'
-          ports: '9092,9093'
+          ports: '9092'
     when: firewall_label|d(False)
 
 
