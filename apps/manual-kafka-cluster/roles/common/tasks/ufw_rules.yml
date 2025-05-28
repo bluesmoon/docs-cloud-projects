@@ -22,6 +22,15 @@
     from_ip: "{{ item.instance.ip_priv1 }}"
   loop: "{{ kafka_data.server }}"
 
+# kafka connect port
+- name: Allow private cluster access to tcp port 8083
+  community.general.ufw:
+    rule: allow
+    port: '8083'
+    proto: tcp
+    from_ip: "{{ item.instance.ip_priv1 }}"
+  loop: "{{ kafka_data.server }}"
+
 # async to avoid connection disruption
 - name: Enable ufw
   community.general.ufw:
