@@ -44,6 +44,18 @@
     - { regexp: '^\#?PubkeyAuthentication (yes|no)', line: 'PubkeyAuthentication yes' }
   notify: restart ssh
 
+- name: set hard nofile limit
+  community.general.pam_limits:
+    domain: '{{ item.domain }}'
+    limit_type: '-'
+    limit_item: nofile
+    value: '{{ item.value }}'
+  loop:
+    - domain: '*'
+      value: 1048576
+    - domain: 'root'
+      value: 16777216
+
 - name: Check if reboot required
   stat:
     path: /var/run/reboot-required
