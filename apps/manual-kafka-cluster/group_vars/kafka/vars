@@ -5,7 +5,9 @@ ssh_keys:
 
 instance_prefix: kafka
 type: g6-dedicated-2
-region: us-southeast
+region:
+  - us-ord
+  - us-mia
 image: linode/ubuntu24.04
 group:
 linode_tags:
@@ -16,14 +18,17 @@ vpc_label:
 domain_name:
 ttl_sec:
 
+cert_validity: +90d
+
 cluster_size: 3
+controller_count: 3
+controllers_and_brokers: 2
 client_count: 2
 sudo_username: admin
 
 # Do not update #
 ####################
 kafka_version: 3.8.0
-controller_count: 3
 #####################
 
 #tls

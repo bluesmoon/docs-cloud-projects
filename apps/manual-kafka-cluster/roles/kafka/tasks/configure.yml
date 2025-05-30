@@ -10,7 +10,7 @@
 - name: 'remote region ({{ remote_region }}) bootstrap servers'
   set_fact:
     remote_bootstrap_servers: '{{ (kafka_data.server
-                                     | selectattr("instance.region", "eq", remote_region))[0:3]
+                                     | selectattr("instance.region", "eq", remote_region))[0:controller_count]
                                    | map(attribute="instance.hostname")
                                    | product([":9092"])
                                    | map("join")
@@ -20,7 +20,7 @@
 
 - name: 'subset of {{ region_name }} servers'
   set_fact:
-    cluster_servers: '{{ (kafka_data.server | selectattr("instance.region", "eq", region_name))[0:3]
+    cluster_servers: '{{ (kafka_data.server | selectattr("instance.region", "eq", region_name))[0:controller_count]
                          | map(attribute="instance.hostname") }}'
   run_once: true
   delegate_to: localhost
@@ -28,7 +28,7 @@
 - name: '{{ region_name }} servers and voters'
   set_fact:
     region_bootstrap_servers: '{{ cluster_servers | product([":9092"]) | map("join") | join(", ") }}'
-    quorum_voters: '{{ query("sequence", "", start=1, count=3, format="%d@")
+    quorum_voters: '{{ query("sequence", "", start=1, count=controller_count, format="%d@")
                        | zip_longest(cluster_servers, [], fillvalue=":9093")
                        | map("join")
                        | join(", ") }}'
@@ -51,8 +51,8 @@
   when:
     - hostvars[inventory_hostname].region == region_name
 
-# mirror-maker for servers that are controller and broker roles
-- name: updating kafka mirror maker config for controller and broker
+# mirror-maker for servers that are controllers
+- name: updating kafka mirror maker config for controllers
   template:
     src: templates/connect-mirror-maker.properties.j2
     dest: "{{ kafka_config_directory }}/connect-mirror-maker.properties"
@@ -65,7 +65,7 @@
     listener: '{{ hostname_map[inventory_hostname].instance.hostname }}'
   when:
     - hostvars[inventory_hostname].region == region_name
-    - hostvars[inventory_hostname].role == 'controller and broker'
+    - '"controller" in hostvars[inventory_hostname].role'
 
 - name: check existing kafka cluster uuid
   shell:

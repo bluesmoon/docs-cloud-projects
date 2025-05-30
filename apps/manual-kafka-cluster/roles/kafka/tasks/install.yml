@@ -46,7 +46,7 @@
     src: templates/mirror-maker.service.j2
     dest: "/usr/lib/systemd/system/mirror-maker.service"
   when:
-    - hostvars[inventory_hostname].role == 'controller and broker'
+    - '"controller" in hostvars[inventory_hostname].role'
 
 - name: create kafka data and log directory
   file:

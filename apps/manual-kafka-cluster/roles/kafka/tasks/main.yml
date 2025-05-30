@@ -40,4 +40,4 @@
     enabled: true
     daemon_reload: true
   when:
-    - hostvars[inventory_hostname].role == 'controller and broker'
+    - '"controller" in hostvars[inventory_hostname].role'

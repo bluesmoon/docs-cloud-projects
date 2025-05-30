@@ -157,7 +157,7 @@
         id: '{{ (placement_group_info.results | selectattr("placement_group.region", "eq", item.1) | map(attribute="placement_group"))[(item[2]|int-1) // max_hosts_per_pg].id }}'
       private_ip: false
       ua_prefix: 'docs-kafka-occ'
-      tags: '{{ linode_tags }},broker{% if (item[2]|int) <= 3 %},controller{% endif %}'
+      tags: '{{ linode_tags }}{% if (item[2]|int) > (controller_count - controllers_and_brokers) %},broker{% endif %}{% if (item[2]|int) <= controller_count %},controller{% endif %}'
       state: present
       firewall_id: '{{ (firewall_info.firewall|default({})).id|default(omit) }}'
     with_nested:
@@ -177,7 +177,7 @@
 
   - name: create broker and controller lists
     set_fact:
-      all_hosts: "{{ all_hosts|d([]) + [{ 'id': item.instance.id, 'ip': item.networking.ipv4.public.0.address, 'region': item.instance.region, 'iscontroller': item.instance.tags is contains('controller') }] }}"
+      all_hosts: "{{ all_hosts|d([]) + [{ 'id': item.instance.id, 'ip': item.networking.ipv4.public.0.address, 'region': item.instance.region, 'isbroker': item.instance.tags is contains('broker'), 'iscontroller': item.instance.tags is contains('controller'), 'tags': item.instance.tags }] }}"
     with_items: '{{ info.results }}'
 
 
@@ -248,7 +248,7 @@
       - domain_info|d(False)
       - item[0].name is regex('-' + item[1] + '-')
       - (item[0].name in instance_ips and item[0].target != instance_ips[item[0].name]) or
-        (item[0].name == instance_prefix + '-' + item[1] + '-broker' and item[0].target not in (all_hosts | rejectattr('iscontroller') | map(attribute='ip')) ) or
+        (item[0].name == instance_prefix + '-' + item[1] + '-broker'     and item[0].target not in (all_hosts | selectattr('isbroker')     | map(attribute='ip')) ) or
         (item[0].name == instance_prefix + '-' + item[1] + '-controller' and item[0].target not in (all_hosts | selectattr('iscontroller') | map(attribute='ip')) )
     with_nested:
       - "{{ domain_info.records }}"
@@ -274,17 +274,18 @@
     linode.cloud.domain_record:
       api_token: '{{ api_token }}'
       domain_id: '{{ domain_info.domain.id }}'
-      name: '{{ instance_prefix }}-{{ item[0].region }}-{% if item[1] and item[0].iscontroller %}controller{% else %}broker{% endif %}'
+      name: '{{ instance_prefix }}-{{ item.0.region }}-{{ item.1 }}'
       target: '{{ item[0].ip }}'
       ttl_sec: '{{ ttl_sec | default(omit) }}'
       type: 'A'
       state: present
     with_nested:
       -  "{{ all_hosts }}"
-      - [false, true]     # This runs the list twice for brokers and once for controllers
+      - ['controller', 'broker']
     when:
       - domain_name|d(False)
       - domain_info|d(False)
+      - item.1 in item.0.tags
 
 
   # Update inventory
@@ -323,7 +324,7 @@
         {%- for r in [region]|flatten %}
         [{{ r }}]
         {%- for instance in info.results | selectattr('instance.region', 'eq', r) %}
-        {{ instance.networking.ipv4.public.0.rdns }} region='{{ instance.instance.region }}' {% if 'controller' in instance.instance.tags  %}role='controller and broker'{%else%}role='broker only'{%endif%}
+        {{ instance.networking.ipv4.public.0.rdns }} region='{{ instance.instance.region }}' role='{% if 'controller' in instance.instance.tags  %}controller{% if 'broker' in instance.instance.tags %} and broker{% endif %}{% else %}broker only{%endif%}'
         {%- endfor %}
         {% endfor %}
         [kafka:children]
