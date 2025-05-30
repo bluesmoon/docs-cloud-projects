@@ -37,8 +37,8 @@
 
 - name: updating kafka config for controllers and brokers
   template:
-    src: templates/{{ server_properties | basename }}.j2
-    dest: "{{ server_properties }}"
+    src: templates/server.properties.j2
+    dest: "{{ kafka_config_directory }}/kraft/server.properties"
     owner: kafka
     group: kafka
     mode: 0644
@@ -47,7 +47,7 @@
   vars:
     node_id: '{{ (groups[region_name] | ansible.utils.index_of("eq", inventory_hostname)) + 1 }}'
     listener: '{{ hostname_map[inventory_hostname].instance.hostname }}'
-    server_properties: "{{ kafka_config_directory }}/{{ role_properties[hostvars[inventory_hostname].role] }}"
+    server_roles: '{{ hostvars[inventory_hostname].role | regex_replace(" only", "") | split(" and ") }}'
   when:
     - hostvars[inventory_hostname].region == region_name
 
@@ -91,10 +91,8 @@
 
 - name: format data directory for controllers and brokers
   command:
-    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ server_properties }} --ignore-formatted"
+    cmd: "{{ kafka_bin_directory }}/kafka-storage.sh format -t {{ cluster_uuid}} -c {{ kafka_config_directory }}/kraft/server.properties --ignore-formatted"
   become: true
   become_user: kafka
-  vars:
-    server_properties: "{{ kafka_config_directory }}/{{ role_properties[hostvars[inventory_hostname].role] }}"
   when:
     - hostvars[inventory_hostname].region == region_name

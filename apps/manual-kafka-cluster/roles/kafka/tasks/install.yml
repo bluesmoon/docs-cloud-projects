@@ -39,7 +39,7 @@
     dest: /lib/systemd/system/kafka.service
   vars:
     myrole: "{{ hostvars[inventory_hostname].role }}"
-    server_properties: "{{ kafka_config_directory }}/{{ role_properties[hostvars[inventory_hostname].role] }}"
+    server_properties: "{{ kafka_config_directory }}/kraft/server.properties"
 
 - name: add kafka mirror-maker systemd service file for broker and controller
   ansible.builtin.template:

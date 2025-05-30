@@ -1,12 +1,9 @@
 ---
 # main
 
-- name: map inventory hosts to group vars and set role_properties files
+- name: map inventory hosts to group vars
   set_fact:
     hostname_map: '{{ dict(groups["kafka"] | zip(kafka_data.server) ) }}'
-    role_properties:
-      "controller and broker": "kraft/server.properties"
-      "broker only": "kraft/broker.properties"
   run_once: true
   delegate_to: localhost
 
