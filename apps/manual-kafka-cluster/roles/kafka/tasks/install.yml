@@ -45,8 +45,6 @@
   ansible.builtin.template:
     src: templates/mirror-maker.service.j2
     dest: "/usr/lib/systemd/system/mirror-maker.service"
-  when:
-    - '"controller" in hostvars[inventory_hostname].role'
 
 - name: create kafka data and log directory
   file:
