@@ -28,7 +28,8 @@ sudo_username: admin
 
 # Do not update #
 ####################
-kafka_version: 3.8.0
+kafka_version: 3.9.1
+kafka_checksum: "sha512:1EA204BA73411737A275429CA976D440F007FF0957B90B19BE41DC5A4BAE52617267769BE9F0B5791714D0B3C4C760605BD426FAEA39EDD90763585523FA2CFE"
 #####################
 
 #tls
