@@ -118,7 +118,7 @@
     email_address: '{{ email_address }}'
     common_name: '{{ hostname_map[inventory_hostname].instance.hostname }}'
     use_common_name_for_san: false
-    subject_alt_name: '{{ ["DNS:"] | product(hostname_map[inventory_hostname].instance.aliases) | map("join") }}'
+    subject_alt_name: '{{ ((["DNS:"] | product(hostname_map[inventory_hostname].instance.aliases)) + ["IP:" + hostname_map[inventory_hostname].instance.ip_pub1]) | map("join") }}'
     owner: kafka
     group: kafka
 
