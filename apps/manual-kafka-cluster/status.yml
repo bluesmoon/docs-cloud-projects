@@ -1,0 +1,35 @@
+---
+# status of kafka servers
+- name: status of kafka instances
+  hosts: kafka
+  vars_files:
+      - group_vars/kafka/vars
+      - group_vars/kafka/secret_vars
+
+  tasks:
+
+  - name: gather service state
+    service_facts:
+    register: services_state
+
+  - name: kafka service status
+    debug:
+      var: item
+    loop: '{{ services_state.ansible_facts.services
+              | dict2items
+              | map(attribute="value")
+              | selectattr("name", "in", ["kafka.service"])
+              | map("dict2items")
+              | map("selectattr", "key", "in", ["name", "state"])
+              | map("items2dict") }}'
+
+  - name: mirror maker service status
+    debug:
+      var: item
+    loop: '{{ services_state.ansible_facts.services
+              | dict2items
+              | map(attribute="value")
+              | selectattr("name", "in", ["mirror-maker.service"])
+              | map("dict2items")
+              | map("selectattr", "key", "in", ["name", "state"])
+              | map("items2dict") }}'
