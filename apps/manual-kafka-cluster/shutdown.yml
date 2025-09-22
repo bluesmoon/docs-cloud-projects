@@ -15,7 +15,7 @@
     linode.cloud.domain_info:
       api_token: '{{ api_token }}'
       domain: '{{ domain_name }}'
-    when: domain_name|d(False)
+    when: domain_name|d(False)|bool
     register: domain_info
 
   - name: remove hosts from dns
@@ -26,8 +26,8 @@
       record_id: '{{ item.id }}'
       state: absent
     when:
-      - domain_name|d(False)
-      - domain_info|d(False)
+      - domain_name|d(False)|bool
+      - domain_info|d(False)|bool
       - item.target in (kafka_data.server | map(attribute='instance.ip_pub1'))
     with_items: "{{ domain_info.records }}"
 
@@ -40,7 +40,7 @@
       api_token: '{{ api_token }}'
       filters:
         - name: label
-          values: "{{ [ instance_prefix ] | product([region]|flatten, query('sequence', 'count={{cluster_size}} format=%03d')) | map('join', '-') | list }}"
+          values: "{{ [ instance_prefix ] | product([region]|flatten, query('sequence', count=cluster_size, format='%03d')) | map('join', '-') | list }}"
       order_by: label
     register: existing_instances
 
@@ -62,7 +62,7 @@
       label: '{{ firewall_label }}'
       api_token: '{{ api_token }}'
     register: firewall_info
-    when: firewall_label|d(False)
+    when: firewall_label|d(False)|bool
 
   - name: remove hosts from firewall
     # https://galaxy.ansible.com/ui/repo/published/linode/cloud/content/module/firewall/
@@ -78,7 +78,7 @@
       status: '{{ firewall_info.firewall.status }}'
       tags: '{{ firewall_info.firewall.tags }}'
       state: 'present'
-    when: firewall_label|d(False)
+    when: firewall_label|d(False)|bool
 
   - name: update group_vars
     blockinfile:
