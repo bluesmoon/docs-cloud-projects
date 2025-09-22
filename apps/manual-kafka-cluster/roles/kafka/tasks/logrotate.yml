@@ -1,0 +1,10 @@
+---
+# Set up cron tasks that cleans up old application log files
+
+- name: kafka log rotation
+  ansible.builtin.template:
+    src: templates/kafka.cron
+    dest: /etc/cron.daily/kafka
+    owner: root
+    group: root
+    mode: '0755'

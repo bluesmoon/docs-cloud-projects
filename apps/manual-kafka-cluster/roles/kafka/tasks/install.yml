@@ -54,6 +54,14 @@
     owner: kafka
     group: kafka
 
+- name: create kraft config directory
+  file:
+    path: "{{ kafka_config_directory }}/kraft"
+    state: directory
+    mode: 0755
+    owner: kafka
+    group: kafka
+
 # client-properties for all servers for admin tasks
 - name: updating kafka client properties
   template:

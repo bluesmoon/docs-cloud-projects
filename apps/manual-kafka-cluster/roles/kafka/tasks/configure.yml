@@ -1,5 +1,5 @@
 ---
-# configure kafka 
+# configure kafka
 
 - name: remote region is the first region that is not the current region
   set_fact:
@@ -69,8 +69,8 @@
 
 - name: check existing kafka cluster uuid
   shell:
-    cmd: grep -s cluster.id {{ kafka_data_directory }}/data/kraft-combined-logs/meta.properties | cut -f 2 -d = || /bin/true
-    removes: "{{ kafka_data_directory}}/data/kraft-combined-logs/meta.properties"
+    cmd: grep -s cluster.id {{ kafka_data_directory }}/data/kraft-metadata-logs/meta.properties | cut -f 2 -d = || /bin/true
+    removes: "{{ kafka_data_directory}}/data/kraft-metadata-logs/meta.properties"
   register: old_cluster_uuid
   run_once: true
   delegate_to: "{{ groups[region_name][0] }}"
@@ -78,7 +78,7 @@
 - name: create kafka cluster uuid
   command:
     cmd:  "{{ kafka_bin_directory }}/kafka-storage.sh random-uuid"
-    creates: "{{ kafka_data_directory}}/data/kraft-combined-logs/meta.properties"
+    creates: "{{ kafka_data_directory}}/data/kraft-metadata-logs/meta.properties"
   register: new_cluster_uuid
   run_once: true
   delegate_to: "{{ groups[region_name][0] }}"

@@ -26,6 +26,9 @@
     loop_var: region_name
   when: hostvars[inventory_hostname].region == region_name
 
+- name: setup application log cleanup
+  include_tasks: logrotate.yml
+
 - name: starting kafka
   systemd:
     name: kafka
