@@ -146,6 +146,7 @@
       image: '{{ image }}'
       root_pass: '{{ root_password }}'
       authorized_keys: '{{ ssh_keys }}'
+      disk_encryption: 'enabled'
       interfaces:
         - purpose: 'vpc'
           subnet_id: '{{ (vpc_subnet_info.results | selectattr("item.vpc.region", "eq", item.1) | map(attribute="subnet.id") | first) }}'
