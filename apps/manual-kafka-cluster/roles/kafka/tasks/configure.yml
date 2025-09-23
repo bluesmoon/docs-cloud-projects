@@ -1,23 +1,6 @@
 ---
 # configure kafka
 
-- name: remote region is the first region that is not the current region
-  set_fact:
-    remote_region: '{{ ([region] | flatten | select("!=", region_name))[0] }}'
-  run_once: true
-  delegate_to: localhost
-
-- name: 'remote region ({{ remote_region }}) bootstrap servers'
-  set_fact:
-    remote_bootstrap_servers: '{{ (kafka_data.server
-                                     | selectattr("instance.region", "eq", remote_region))[0:controller_count]
-                                   | map(attribute="instance.hostname")
-                                   | product([":9092"])
-                                   | map("join")
-                                   | join(", ") }}'
-  run_once: true
-  delegate_to: localhost
-
 - name: 'subset of {{ region_name }} servers'
   set_fact:
     cluster_servers: '{{ (kafka_data.server | selectattr("instance.region", "eq", region_name))[0:controller_count]
@@ -27,7 +10,6 @@
 
 - name: '{{ region_name }} servers and voters'
   set_fact:
-    region_bootstrap_servers: '{{ cluster_servers | product([":9092"]) | map("join") | join(", ") }}'
     quorum_voters: '{{ query("sequence", "", start=1, count=controller_count, format="%d@")
                        | zip_longest(cluster_servers, [], fillvalue=":9093")
                        | map("join")
@@ -50,22 +32,6 @@
     server_roles: '{{ hostvars[inventory_hostname].role | regex_replace(" only", "") | split(" and ") }}'
   when:
     - hostvars[inventory_hostname].region == region_name
-
-# mirror-maker for servers that are controllers
-- name: updating kafka mirror maker config for controllers
-  template:
-    src: templates/connect-mirror-maker.properties.j2
-    dest: "{{ kafka_config_directory }}/connect-mirror-maker.properties"
-    owner: kafka
-    group: kafka
-    mode: 0644
-    backup: true
-    force: true
-  vars:
-    listener: '{{ hostname_map[inventory_hostname].instance.hostname }}'
-  when:
-    - hostvars[inventory_hostname].region == region_name
-    - '"controller" in hostvars[inventory_hostname].role'
 
 - name: check existing kafka cluster uuid
   shell:

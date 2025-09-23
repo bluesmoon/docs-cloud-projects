@@ -30,7 +30,16 @@
     loop_var: region_name
   when: hostvars[inventory_hostname].region == region_name
   tags:
-    - configure
+    - configure_kafka
+
+- name: configure mirror-maker
+  include_tasks: mirror-maker.yml
+  loop: '{{ [region] | flatten }}'
+  loop_control:
+    loop_var: region_name
+  when: hostvars[inventory_hostname].region == region_name
+  tags:
+    - configure_mirror_maker
 
 - name: setup application log cleanup
   include_tasks: logrotate.yml
