@@ -15,9 +15,13 @@
 
 - name: installing kafka
   import_tasks: install.yml
+  tags:
+    - install
 
 - name: configure cluster certs
   import_tasks: ssl.yml
+  tags:
+    - certs
 
 - name: configure kafka
   include_tasks: configure.yml
@@ -25,6 +29,8 @@
   loop_control:
     loop_var: region_name
   when: hostvars[inventory_hostname].region == region_name
+  tags:
+    - configure
 
 - name: setup application log cleanup
   include_tasks: logrotate.yml
